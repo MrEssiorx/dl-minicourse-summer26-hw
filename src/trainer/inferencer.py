@@ -1,6 +1,9 @@
+import csv
+
 import torch
 from tqdm.auto import tqdm
 
+from src.metrics.eer import EERMetric
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -96,65 +99,31 @@ class Inferencer(BaseTrainer):
 
     def process_batch(self, batch_idx, batch, metrics, part):
         """
-        Run batch through the model, compute metrics, and
-        save predictions to disk.
-
-        Save directory is defined by save_path in the inference
-        config and current partition.
+        Run batch through the model and compute the bonafide score.
 
         Args:
             batch_idx (int): the index of the current batch.
             batch (dict): dict-based batch containing the data from
                 the dataloader.
-            metrics (MetricTracker): MetricTracker object that computes
-                and aggregates the metrics. The metrics depend on the type
-                of the partition (train or inference).
-            part (str): name of the partition. Used to define proper saving
-                directory.
+            metrics (MetricTracker | None): unused, kept for signature
+                compatibility.
+            part (str): name of the partition.
         Returns:
-            batch (dict): dict-based batch containing the data from
-                the dataloader (possibly transformed via batch transform)
-                and model outputs.
+            batch (dict): dict-based batch with model outputs and scores.
         """
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         outputs = self.model(**batch)
         batch.update(outputs)
-
-        if metrics is not None:
-            for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
-
-        # Some saving logic. This is an example
-        # Use if you need to save predictions on disk
-
-        batch_size = batch["logits"].shape[0]
-        current_id = batch_idx * batch_size
-
-        for i in range(batch_size):
-            # clone because of
-            # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
-
-            output_id = current_id + i
-
-            output = {
-                "pred_label": pred_label,
-                "label": label,
-            }
-
-            if self.save_path is not None:
-                # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+        batch["scores"] = batch["logits"].softmax(dim=-1)[:, 1]
 
         return batch
 
     def _inference_part(self, part, dataloader):
         """
-        Run inference on a given partition and save predictions
+        Run inference on a partition, save per-utterance scores as a CSV for
+        grading, and compute the EER using the partition labels.
 
         Args:
             part (str): name of the partition.
@@ -162,16 +131,12 @@ class Inferencer(BaseTrainer):
         Returns:
             logs (dict): metrics, calculated on the partition.
         """
-
         self.is_train = False
         self.model.eval()
 
-        self.evaluation_metrics.reset()
-
-        # create Save dir
-        if self.save_path is not None:
-            (self.save_path / part).mkdir(exist_ok=True, parents=True)
-
+        utt_ids = []
+        all_scores = []
+        all_labels = []
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -182,7 +147,31 @@ class Inferencer(BaseTrainer):
                     batch_idx=batch_idx,
                     batch=batch,
                     part=part,
-                    metrics=self.evaluation_metrics,
+                    metrics=None,
                 )
+                utt_ids.extend(batch["utt_id"])
+                all_scores.append(batch["scores"].cpu())
+                all_labels.append(batch["labels"].cpu())
 
-        return self.evaluation_metrics.result()
+        all_scores = torch.cat(all_scores).numpy()
+        all_labels = torch.cat(all_labels).numpy()
+
+        self._save_predictions(part, utt_ids, all_scores)
+
+        return {"EER": EERMetric()(scores=all_scores, labels=all_labels)}
+
+    def _save_predictions(self, part, utt_ids, scores):
+        """
+        Write per-utterance scores as a two-column, header-less CSV
+        (utterance id, score), the format expected by grading.py.
+
+        Args:
+            part (str): name of the partition, used as the file name.
+            utt_ids (list[str]): utterance identifiers.
+            scores (np.ndarray): bonafide scores aligned with utt_ids.
+        """
+        save_file = self.save_path / f"{part}.csv"
+        with open(save_file, "w", newline="") as f:
+            writer = csv.writer(f)
+            for utt_id, score in zip(utt_ids, scores):
+                writer.writerow([utt_id, float(score)])

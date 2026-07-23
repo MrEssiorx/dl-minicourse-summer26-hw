@@ -2,7 +2,7 @@ import logging
 import random
 from typing import List
 
-import torch
+import torchaudio
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
@@ -10,44 +10,57 @@ logger = logging.getLogger(__name__)
 
 class BaseDataset(Dataset):
     """
-    Base class for the datasets.
+    Base class for audio datasets.
 
     Given a proper index (list[dict]), allows to process different datasets
     for the same task in the identical manner. Therefore, to work with
     several datasets, the user only have to define index in a nested class.
+
+    Each dataset element is a dict that carries the loaded waveform, its
+    spectrogram, the target label, and all extra metadata fields found in
+    the index entry (e.g. utterance and attack identifiers).
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self,
+        index,
+        target_sr=16000,
+        limit=None,
+        shuffle_index=False,
+        instance_transforms=None,
     ):
         """
         Args:
             index (list[dict]): list, containing dict for each element of
                 the dataset. The dict has required metadata information,
                 such as label and object path.
+            target_sr (int): supported sample rate. Loaded audio is
+                resampled to target_sr if needed.
             limit (int | None): if not None, limit the total number of elements
                 in the dataset to 'limit' elements.
             shuffle_index (bool): if True, shuffle the index. Uses python
                 random package with seed 42.
             instance_transforms (dict[Callable] | None): transforms that
-                should be applied on the instance. Depend on the
-                tensor name.
+                should be applied on the instance. Depend on the tensor name.
+                The special key "get_spectrogram" defines the
+                waveform-to-spectrogram front-end.
         """
         self._assert_index_is_valid(index)
 
         index = self._shuffle_and_limit_index(index, limit, shuffle_index)
         self._index: List[dict] = index
 
+        self.target_sr = target_sr
         self.instance_transforms = instance_transforms
 
     def __getitem__(self, ind):
         """
-        Get element from the index, preprocess it, and combine it
-        into a dict.
+        Get element from the index, load its audio, compute the spectrogram,
+        and combine everything into a dict.
 
-        Notice that the choice of key names is defined by the template user.
-        However, they should be consistent across dataset getitem, collate_fn,
-        loss_function forward method, and model forward method.
+        All metadata fields of the index entry are passed through into the
+        instance dict, so downstream consumers (collate_fn, logger,
+        submission writer) can access them by name.
 
         Args:
             ind (int): index in the self.index list.
@@ -56,11 +69,10 @@ class BaseDataset(Dataset):
                 (a single dataset element).
         """
         data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
 
-        instance_data = {"data_object": data_object, "labels": data_label}
+        instance_data = dict(data_dict)
+        instance_data["audio"] = self.load_audio(data_dict["path"])
+        instance_data["labels"] = data_dict["label"]
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -71,61 +83,58 @@ class BaseDataset(Dataset):
         """
         return len(self._index)
 
-    def load_object(self, path):
+    def load_audio(self, path):
         """
-        Load object from disk.
+        Load audio from disk and keep the first channel only.
+
+        The sample rate is asserted to match target_sr because the STFT
+        front-end parameters are defined in milliseconds at target_sr.
 
         Args:
-            path (str): path to the object.
+            path (str): path to the audio file.
         Returns:
-            data_object (Tensor):
+            audio (Tensor): waveform of shape (1, T), T varies between
+                utterances.
         """
-        data_object = torch.load(path)
-        return data_object
+        audio_tensor, sr = torchaudio.load(path)
+        assert sr == self.target_sr, f"Expected {self.target_sr} Hz, got {sr}: {path}"
+        return audio_tensor[0:1, :]
+
+    def get_spectrogram(self, audio):
+        """
+        Special instance transform with a special key to
+        get spectrogram from audio.
+
+        Args:
+            audio (Tensor): original audio.
+        Returns:
+            spectrogram (Tensor): spectrogram for the audio.
+        """
+        return self.instance_transforms["get_spectrogram"](audio)
 
     def preprocess_data(self, instance_data):
         """
-        Preprocess data with instance transforms.
-
-        Each tensor in a dict undergoes its own transform defined by the key.
+        Compute the spectrogram from the waveform and apply
+        spectrogram-level transforms.
 
         Args:
             instance_data (dict): dict, containing instance
                 (a single dataset element).
         Returns:
             instance_data (dict): dict, containing instance
-                (a single dataset element) (possibly transformed via
-                instance transform).
+                (a single dataset element) with the spectrogram added.
         """
-        if self.instance_transforms is not None:
-            for transform_name in self.instance_transforms.keys():
-                instance_data[transform_name] = self.instance_transforms[
-                    transform_name
-                ](instance_data[transform_name])
+        if self.instance_transforms is None:
+            return instance_data
+
+        instance_data["spectrogram"] = self.get_spectrogram(instance_data["audio"])
+
+        if "spectrogram" in self.instance_transforms:
+            instance_data["spectrogram"] = self.instance_transforms["spectrogram"](
+                instance_data["spectrogram"]
+            )
+
         return instance_data
-
-    @staticmethod
-    def _filter_records_from_dataset(
-        index: list,
-    ) -> list:
-        """
-        Filter some of the elements from the dataset depending on
-        some condition.
-
-        This is not used in the example. The method should be called in
-        the __init__ before shuffling and limiting.
-
-        Args:
-            index (list[dict]): list, containing dict for each element of
-                the dataset. The dict has required metadata information,
-                such as label and object path.
-        Returns:
-            index (list[dict]): list, containing dict for each element of
-                the dataset that satisfied the condition. The dict has
-                required metadata information, such as label and object path.
-        """
-        # Filter logic
-        pass
 
     @staticmethod
     def _assert_index_is_valid(index):
@@ -146,25 +155,6 @@ class BaseDataset(Dataset):
                 "Each dataset item should include field 'label'"
                 " - object ground-truth label."
             )
-
-    @staticmethod
-    def _sort_index(index):
-        """
-        Sort index via some rules.
-
-        This is not used in the example. The method should be called in
-        the __init__ before shuffling and limiting and after filtering.
-
-        Args:
-            index (list[dict]): list, containing dict for each element of
-                the dataset. The dict has required metadata information,
-                such as label and object path.
-        Returns:
-            index (list[dict]): sorted list, containing dict for each element
-                of the dataset. The dict has required metadata information,
-                such as label and object path.
-        """
-        return sorted(index, key=lambda x: x["KEY_FOR_SORTING"])
 
     @staticmethod
     def _shuffle_and_limit_index(index, limit, shuffle_index):
