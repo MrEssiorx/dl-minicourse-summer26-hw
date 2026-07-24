@@ -28,6 +28,7 @@ class BaseDataset(Dataset):
         limit=None,
         shuffle_index=False,
         instance_transforms=None,
+        cache=False,
     ):
         """
         Args:
@@ -53,6 +54,8 @@ class BaseDataset(Dataset):
         self.target_sr = target_sr
         self.instance_transforms = instance_transforms
 
+        self._cache = {} if cache else None
+
     def __getitem__(self, ind):
         """
         Get element from the index, load its audio, compute the spectrogram,
@@ -68,12 +71,18 @@ class BaseDataset(Dataset):
             instance_data (dict): dict, containing instance
                 (a single dataset element).
         """
+        if self._cache is not None and ind in self._cache:
+            return self._cache[ind]
+
         data_dict = self._index[ind]
 
         instance_data = dict(data_dict)
         instance_data["audio"] = self.load_audio(data_dict["path"])
         instance_data["labels"] = data_dict["label"]
         instance_data = self.preprocess_data(instance_data)
+
+        if self._cache is not None:
+            self._cache[ind] = instance_data
 
         return instance_data
 
