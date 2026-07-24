@@ -1,0 +1,8 @@
+defaults:
+  - instance_transforms: asvspoof
+  - _self_
+
+# no batch-level transforms are used for this task
+batch_transforms:
+  train: null
+  inference: null

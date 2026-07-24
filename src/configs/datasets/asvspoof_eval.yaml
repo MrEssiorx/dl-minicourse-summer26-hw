@@ -1,0 +1,5 @@
+eval:
+  _target_: src.datasets.ASVSpoofDataset
+  part: "eval"
+  data_dir: /kaggle/input/asvpoof-2019-dataset/LA/LA # edit to actual mount/local path
+  instance_transforms: ${transforms.instance_transforms.inference}

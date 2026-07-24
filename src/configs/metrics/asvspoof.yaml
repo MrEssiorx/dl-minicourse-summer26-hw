@@ -1,0 +1,11 @@
+device: "auto"
+train: # per-batch metrics, averaged over training batches
+  - _target_: src.metrics.ExampleMetric
+    metric:
+      _target_: torchmetrics.classification.MulticlassAccuracy
+      num_classes: 2
+    device: ${metrics.device}
+    name: "Accuracy"
+# EER is corpus-level (defined over a whole partition, not a single batch),
+# so it is computed once per evaluation inside the Trainer, not here.
+inference: []

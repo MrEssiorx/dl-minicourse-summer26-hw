@@ -1,0 +1,20 @@
+train:
+  get_spectrogram: # special key for getting spectrogram
+    _target_: src.transforms.STFT
+    sample_rate: 16000
+    win_length_ms: 20
+    hop_length_ms: 10
+    n_fft: 512
+  spectrogram: # name of the tensor on which we apply transform
+    _target_: src.transforms.FixedLengthCrop
+    num_frames: 750
+inference:
+  get_spectrogram:
+    _target_: src.transforms.STFT
+    sample_rate: 16000
+    win_length_ms: 20
+    hop_length_ms: 10
+    n_fft: 512
+  spectrogram:
+    _target_: src.transforms.FixedLengthCrop
+    num_frames: 750

@@ -1,0 +1,5 @@
+_target_: src.model.LCNN
+n_freq: 257 # n_fft // 2 + 1, must match the STFT front-end
+n_time: 750 # must match FixedLengthCrop num_frames
+n_class: 2
+dropout: 0.75

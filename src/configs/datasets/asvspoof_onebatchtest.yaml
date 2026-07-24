@@ -1,0 +1,14 @@
+train:
+  _target_: src.datasets.ASVSpoofDataset
+  part: "train"
+  data_dir: /kaggle/input/asvpoof-2019-dataset/LA/LA # edit to actual mount/local path
+  limit: 10
+  shuffle_index: true
+  instance_transforms: ${transforms.instance_transforms.train}
+dev:
+  _target_: src.datasets.ASVSpoofDataset
+  part: "dev"
+  data_dir: /kaggle/input/asvpoof-2019-dataset/LA/LA # edit to actual mount/local path
+  limit: 10
+  shuffle_index: true
+  instance_transforms: ${transforms.instance_transforms.inference}
