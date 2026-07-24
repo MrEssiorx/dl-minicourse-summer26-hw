@@ -7,14 +7,25 @@ class CrossEntropyLoss(nn.Module):
     Cross-entropy loss for bonafide/spoof classification.
 
     The comparative study (https://arxiv.org/abs/2103.11326) reports that
-    the gain of margin-based softmax over plain cross-entropy on ASVspoof2019
-    LA is trivial and not statistically significant, so plain cross-entropy
-    is used.
+    margin-based softmax is comparable to plain cross-entropy on ASVspoof2019
+    LA and that the random-seed variance can exceed the difference between
+    losses, so plain cross-entropy is used.
+
+    ASVspoof2019 LA is class-imbalanced (spoof outnumbers bonafide roughly
+    9:1), so optional per-class weights can be supplied to counter it.
     """
 
-    def __init__(self):
+    def __init__(self, weight=None):
+        """
+        Args:
+            weight (list[float] | None): per-class weights passed to
+                nn.CrossEntropyLoss, ordered by label index (0: spoof,
+                1: bonafide). None disables weighting.
+        """
         super().__init__()
-        self.loss = nn.CrossEntropyLoss()
+        if weight is not None:
+            weight = torch.tensor(weight, dtype=torch.float)
+        self.loss = nn.CrossEntropyLoss(weight=weight)
 
     def forward(self, logits: torch.Tensor, labels: torch.Tensor, **batch):
         """
