@@ -34,7 +34,7 @@ class ASVSpoofDataset(BaseDataset):
         """
         assert part in PARTITION_DIRS, f"Unknown partition: {part}"
 
-        index_dir = Path(index_dir or ROOT_PATH / "data" / "asvspoof" / part)
+        index_dir = ROOT_PATH / "data" / "asvspoof" / part
         index_path = index_dir / "index.json"
 
         if index_path.exists():
