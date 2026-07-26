@@ -15,7 +15,6 @@ lr_scheduler:
   step_size: ${trainer.epoch_len}
 loss_function:
   _target_: src.loss.CrossEntropyLoss
-  weight: [0.557, 4.919] # inverse train frequency, ordered [spoof, bonafide]
 trainer:
   log_step: 50
   n_epochs: 100
