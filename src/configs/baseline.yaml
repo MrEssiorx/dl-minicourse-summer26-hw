@@ -11,10 +11,11 @@ optimizer:
   lr: 3e-4
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.StepLR
-  gamma: 0.9
-  step_size: ${trainer.epoch_len}
+  gamma: 0.5
+  step_size: 5000
 loss_function:
   _target_: src.loss.CrossEntropyLoss
+  weight: [0.557, 4.919]
 trainer:
   log_step: 50
   n_epochs: 100
