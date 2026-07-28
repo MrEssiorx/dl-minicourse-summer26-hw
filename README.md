@@ -8,23 +8,6 @@ Logical Access (LA) партиции датасета ASVspoof2019. Задача
 
 Код является ответвлением [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).
 
-## Результат
-
-На eval-партиции LA достигнут **EER = 7.2%**
-
-## Ключевые гиперпараметры
-
-| Компонент | Значение |
-| --- | --- |
-| Front-end | STFT, окно 20 мс, шаг 10 мс, n_fft 512 → 257 частотных бинов, FixedLengthCrop до 750 фреймов (zero-pad коротких, случайная обрезка длинных) |
-| Модель | LightCNN, dropout 0.75 (3.93M параметров) |
-| Оптимизатор | Adam, lr 3e-4 |
-| LR-scheduler | StepLR, ×0.9 каждую эпоху |
-| Batch size | 64 |
-| Эпохи | 10 (epoch_len 500 шагов) |
-| Функция потерь | Cross-Entropy с весами классов `[0.557, 4.919]` (spoof, bonafide) |
-| Random Seed | 1 |
-
 ## Структура проекта
 
 Написано с нуля (LCNN / ASVspoof):
@@ -40,12 +23,29 @@ Logical Access (LA) партиции датасета ASVspoof2019. Задача
 front-end), `src/datasets/collate.py`, `src/trainer/*`. Остальное --- шаблон без
 изменений.
 
+## Ключевые гиперпараметры
+
+| Компонент | Значение |
+| --- | --- |
+| Front-end | STFT, окно 20 мс, шаг 10 мс, n_fft 512 $\to$ 257 частотных бинов, FixedLengthCrop до 750 фреймов (zero-pad коротких, случайная обрезка длинных) |
+| Модель | LightCNN, dropout 0.75 (3.93M параметров) |
+| Оптимизатор | Adam, lr 3e-4 |
+| LR-scheduler | StepLR, ×0.9 каждую эпоху |
+| Batch size | 64 |
+| Эпохи | 10 (epoch_len 500 шагов) |
+| Функция потерь | Cross-Entropy с весами классов `[0.557, 4.919]` (spoof, bonafide) |
+| Random Seed | 1 |
+
+## Результат
+
+На eval-партиции LA достигнут **EER = 7.216%**
+
 ## Воспроизведение
 
 
 #### Kaggle-ноутбук
 
-`<ссылка на Kaggle-ноутбук>`
+[https://www.kaggle.com/code/mressiorx/run-training-dl-hw](https://www.kaggle.com/code/mressiorx/run-training-dl-hw)
 
 #### На локальной машине:
 
