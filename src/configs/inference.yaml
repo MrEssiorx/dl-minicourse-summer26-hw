@@ -5,9 +5,10 @@ defaults:
   - dataloader: example
   - transforms: asvspoof
   - _self_
+data_dir: /kaggle/input/datasets/awsaf49/asvpoof-2019-dataset/LA/LA
 inferencer:
   device_tensors: ["spectrogram", "labels"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "asvspoof" # any name here, can be a dataset name
   seed: 1
-  from_pretrained: "saved/model_best.pth" # path to the pretrained model
+  from_pretrained: "saved/lcnn/checkpoint-epoch10.pth" # path to the pretrained model

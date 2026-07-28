@@ -26,11 +26,8 @@ class ASVSpoofDataset(BaseDataset):
     def __init__(self, part, data_dir, *args, **kwargs):
         """
         Args:
-            part (str): partition name, one of "train", "dev", "eval".
+            part (str): "train", "dev", "eval".
             data_dir (str): path to the root of the LA partition on disk
-                (the directory that directly contains ASVspoof2019_LA_train,
-                ASVspoof2019_LA_dev, ASVspoof2019_LA_eval,
-                ASVspoof2019_LA_cm_protocols).
         """
         assert part in PARTITION_DIRS, f"Unknown partition: {part}"
 
@@ -52,16 +49,12 @@ class ASVSpoofDataset(BaseDataset):
 
         Each protocol line has the format:
             SPEAKER_ID  UTT_ID  -  ATTACK_ID  LABEL
-        e.g.:
-            LA_0039 LA_E_2834763 - A11 spoof
 
         Args:
-            part (str): partition name, one of "train", "dev", "eval".
+            part (str): "train", "dev", "eval".
             data_dir (str): path to the root of the LA partition on disk.
         Returns:
-            index (list[dict]): list, containing dict for each element of
-                the dataset. The dict has required metadata information,
-                such as label and object path.
+            index (list[dict])
         """
         data_dir = Path(data_dir)
         protocol_path = (

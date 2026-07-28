@@ -6,12 +6,6 @@ def collate_fn(dataset_items: list[dict]):
     Collate and pad fields in the dataset items.
     Converts individual items into a batch.
 
-    Spectrograms have identical shapes thanks to FixedLengthCrop, so they
-    are stacked along a new batch dimension. Raw waveforms have variable
-    lengths and are not needed by the model, so they are not collated.
-    Utterance and attack identifiers are passed through as lists of
-    strings for the submission writer and per-attack metrics.
-
     Args:
         dataset_items (list[dict]): list of objects from
             dataset.__getitem__.

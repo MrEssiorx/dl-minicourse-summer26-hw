@@ -8,10 +8,6 @@ class LCNN(nn.Module):
     """
     LightCNN countermeasure, following Table 1 of the Speech Technology
     Center paper (https://arxiv.org/abs/1904.05576).
-
-    The convolutional trunk alternates convolutions with MFM 2/1
-    activations, MaxPool, and BatchNorm exactly as listed in Table 1.
-    The classifier head is FC(160) - MFM - Dropout - BatchNorm - FC(2).
     """
 
     def __init__(self, n_freq=257, n_time=750, n_class=2, dropout=0.75):
@@ -26,45 +22,45 @@ class LCNN(nn.Module):
         super().__init__()
 
         self.features = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=5, stride=1, padding=2),  # Conv_1
-            MFM2d(),  # MFM_2 -> 32
-            nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPool_3
-            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0),  # Conv_4
-            MFM2d(),  # MFM_5 -> 32
-            nn.BatchNorm2d(32),  # BatchNorm_6
-            nn.Conv2d(32, 96, kernel_size=3, stride=1, padding=1),  # Conv_7
-            MFM2d(),  # MFM_8 -> 48
-            nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPool_9
-            nn.BatchNorm2d(48),  # BatchNorm_10
-            nn.Conv2d(48, 96, kernel_size=1, stride=1, padding=0),  # Conv_11
-            MFM2d(),  # MFM_12 -> 48
-            nn.BatchNorm2d(48),  # BatchNorm_13
-            nn.Conv2d(48, 128, kernel_size=3, stride=1, padding=1),  # Conv_14
-            MFM2d(),  # MFM_15 -> 64
-            nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPool_16
-            nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0),  # Conv_17
-            MFM2d(),  # MFM_18 -> 64
-            nn.BatchNorm2d(64),  # BatchNorm_19
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),  # Conv_20
-            MFM2d(),  # MFM_21 -> 32
-            nn.BatchNorm2d(32),  # BatchNorm_22
-            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0),  # Conv_23
-            MFM2d(),  # MFM_24 -> 32
-            nn.BatchNorm2d(32),  # BatchNorm_25
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),  # Conv_26
-            MFM2d(),  # MFM_27 -> 32
-            nn.MaxPool2d(kernel_size=2, stride=2),  # MaxPool_28
+            nn.Conv2d(1, 64, kernel_size=5, stride=1, padding=2),
+            MFM2d(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0),
+            MFM2d(),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 96, kernel_size=3, stride=1, padding=1),
+            MFM2d(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.BatchNorm2d(48),
+            nn.Conv2d(48, 96, kernel_size=1, stride=1, padding=0),
+            MFM2d(),
+            nn.BatchNorm2d(48),
+            nn.Conv2d(48, 128, kernel_size=3, stride=1, padding=1),
+            MFM2d(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=1, stride=1, padding=0),
+            MFM2d(),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            MFM2d(),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, kernel_size=1, stride=1, padding=0),
+            MFM2d(),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            MFM2d(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
         )
 
         n_flatten = self._flatten_size(n_freq, n_time)
 
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(n_flatten, 160),  # FC_29
-            MFM1d(),  # MFM_30 -> 80
+            nn.Linear(n_flatten, 160),
+            MFM1d(),
             nn.Dropout(dropout),
-            nn.BatchNorm1d(80),  # BatchNorm_31
-            nn.Linear(80, n_class),  # FC_32
+            nn.BatchNorm1d(80),
+            nn.Linear(80, n_class),
         )
 
     def _flatten_size(self, n_freq, n_time):
@@ -84,8 +80,6 @@ class LCNN(nn.Module):
 
     def forward(self, spectrogram, **batch):
         """
-        Model forward method.
-
         Args:
             spectrogram (Tensor): input spectrogram of shape (N, 1, F, T).
         Returns:

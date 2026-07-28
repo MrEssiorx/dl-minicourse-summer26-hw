@@ -24,8 +24,7 @@ class FixedLengthCrop(nn.Module):
     def forward(self, spectrogram):
         """
         Args:
-            spectrogram (Tensor): tensor of shape (..., T), T varies
-                between instances.
+            spectrogram (Tensor): tensor of shape (..., T)
         Returns:
             spectrogram (Tensor): tensor of shape (..., num_frames).
         """

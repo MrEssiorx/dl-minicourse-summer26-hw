@@ -46,10 +46,6 @@ def compute_eer(bonafide_scores, other_scores):
 class EERMetric:
     """
     Equal Error Rate over a whole partition, expressed in percent.
-
-    EER is defined over the full set of scores at once, not per batch, so
-    the trainer is expected to accumulate scores and labels across the
-    whole partition and call this metric a single time per evaluation.
     """
 
     def __init__(self, name="EER"):
@@ -62,10 +58,8 @@ class EERMetric:
     def __call__(self, scores, labels):
         """
         Args:
-            scores (array-like): per-utterance bonafide scores (higher means
-                more likely bonafide).
-            labels (array-like): per-utterance labels, 1 for bonafide and
-                0 for spoof.
+            scores (array-like): per-utterance bonafide scores
+            labels (array-like): per-utterance labels
         Returns:
             eer (float): equal error rate in percent.
         """

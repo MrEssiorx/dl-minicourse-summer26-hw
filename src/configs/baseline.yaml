@@ -6,6 +6,7 @@ defaults:
   - dataloader: example
   - transforms: asvspoof
   - _self_
+data_dir: /kaggle/input/datasets/awsaf49/asvpoof-2019-dataset/LA/LA
 optimizer:
   _target_: torch.optim.Adam
   lr: 3e-4
