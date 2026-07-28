@@ -1,149 +1,84 @@
-# PyTorch Template for DL projects
+# LCNN Anti-Spoofing (ASVspoof2019 LA)
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#tutorials">Tutorials</a> •
-  <a href="#examples">Examples</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#useful-links">Useful Links</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+Реализация и обучение системы противодействия спуфингу (Countermeasure) на
+Logical Access (LA) партиции датасета ASVspoof2019. Задача  бинарная
+классификация записей на `bonafide` (настоящий голос) и `spoof`
+(spoof-атаки). Модель --- LightCNN (LCNN), 
+вход --- STFT-спектрограмма, метрика качества --- Equal Error Rate (EER).
 
-<p align="center">
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/LICENSE">
-   <img src=https://img.shields.io/badge/license-MIT-blue.svg>
-</a>
-<a href="https://github.com/Blinorot/pytorch_project_template/blob/main/CITATION.cff">
-   <img src="https://img.shields.io/badge/cite-this%20repo-purple">
-</a>
-</p>
+Код является ответвлением [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).
 
-## About
+## Результат
 
-This repository contains a template for [PyTorch](https://pytorch.org/)-based Deep Learning projects.
+На eval-партиции LA достигнут **EER = 7.2%**
 
-The template utilizes different python-dev techniques to improve code readability. Configuration methods enhance reproducibility and experiments control.
+## Ключевые гиперпараметры
 
-The repository is released as a part of the [HSE DLA course](https://github.com/markovka17/dla), however, can easily be adopted for any DL-task.
+| Компонент | Значение |
+| --- | --- |
+| Front-end | STFT, окно 20 мс, шаг 10 мс, n_fft 512 → 257 частотных бинов, FixedLengthCrop до 750 фреймов (zero-pad коротких, случайная обрезка длинных) |
+| Модель | LightCNN, dropout 0.75 (3.93M параметров) |
+| Оптимизатор | Adam, lr 3e-4 |
+| LR-scheduler | StepLR, ×0.9 каждую эпоху |
+| Batch size | 64 |
+| Эпохи | 10 (epoch_len 500 шагов) |
+| Функция потерь | Cross-Entropy с весами классов `[0.557, 4.919]` (spoof, bonafide) |
+| Random Seed | 1 |
 
-This template is the official recommended template for the [EPFL CS-433 ML Course](https://www.epfl.ch/labs/mlo/machine-learning-cs-433/).
+## Структура проекта
 
-**New:** we added a [HF Main](https://github.com/Blinorot/pytorch_project_template/tree/hf_main) variant of the template with [HuggingFace](https://huggingface.co/) Integration for multi-GPU and multi-node training, automatic mixed precision, gradient accumulation, and seamless HuggingFace Ecosystem Compatibility.
+Написано с нуля (LCNN / ASVspoof):
 
-> 📖 **If you use this template in your work, please cite this repository or include a reference. Attribution supports the project and encourages continued development.**
+- `src/model/lcnn.py`, `src/model/mfm.py` --- модель и MFM-активация;
+- `src/datasets/asvspoof_dataset.py` --- датасет и построение индекса по протоколу;
+- `src/loss/cross_entropy.py` --- функция потерь;
+- `src/metrics/eer.py` --- метрика EER;
+- `src/transforms/stft.py`, `src/transforms/fixed_length.py` --- front-end;
+- `src/configs/**` --- файлы конфигурации
 
-## Tutorials
+Адаптированные файлы шаблона: `src/datasets/base_dataset.py` (загрузка аудио +
+front-end), `src/datasets/collate.py`, `src/trainer/*`. Остальное --- шаблон без
+изменений.
 
-This template utilizes experiment tracking techniques, such as [WandB](https://docs.wandb.ai/) and [Comet ML](https://www.comet.com/docs/v2/), and [Hydra](https://hydra.cc/docs/intro/) for the configuration. It also automatically reformats code and conducts several checks via [pre-commit](https://pre-commit.com/). If you are not familiar with these tools, we advise you to look at the tutorials below:
+## Воспроизведение
 
-- [Python Dev Tips](https://github.com/ebezzam/python-dev-tips): information about [Git](https://git-scm.com/doc), [pre-commit](https://pre-commit.com/), [Hydra](https://hydra.cc/docs/intro/), and other stuff for better Python code development. The YouTube recording of the workshop is available [here](https://youtu.be/okxaTuBdDuY).
 
-- [Seminar on R&D Coding 2025](https://youtu.be/PE1zaW5it_A): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with discussion on logging, project-based coding, configuration, and reproducibility. The materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/tree/summer25/day05).
+#### Kaggle-ноутбук
 
-- [Seminar on R&D Coding 2024](https://youtu.be/sEA-Js5ZHxU): Seminar from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/) with template discussion and reasoning. It also explains how to work with [WandB](https://docs.wandb.ai/). The seminar materials can be found [here](https://github.com/LauzHack/deep-learning-bootcamp/blob/main/day03/Seminar_WandB_and_Coding.ipynb).
+`<ссылка на Kaggle-ноутбук>`
 
-- [HSE DLA Course Introduction Week](https://github.com/markovka17/dla/tree/2024/week01): combines the two seminars above into one with some updates, including an extra example for [Comet ML](https://www.comet.com/docs/v2/).
+#### На локальной машине:
 
-- [PyTorch Basics](https://github.com/markovka17/dla/tree/2024/week01/intro_to_pytorch): several notebooks with [PyTorch](https://pytorch.org/docs/stable/index.html) basics and corresponding seminar recordings from the [LauzHack Deep Learning Bootcamp](https://github.com/LauzHack/deep-learning-bootcamp/).
+0. Установить зависимости:
+    ```bash
+    python -m venv venv && source venv/bin/activate
+    pip install -r requirements.txt
+    ```
 
-To start working with a template, just click on the `use this template` button.
+1. Скачать ASVspoof2019 LA ([datashare](https://datashare.ed.ac.uk/handle/10283/3336)
+   или [Kaggle](https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset)).
 
-<a href="https://github.com/Blinorot/pytorch_project_template/generate">
-  <img src="https://img.shields.io/badge/use%20this-template-green?logo=github">
-</a>
-
-You can choose any of the branches as a starting point. [Set your choice as the default branch](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch) in the repository settings. You can also [delete unnecessary branches](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-and-deleting-branches-within-your-repository).
-
-## Examples
-
-> [!IMPORTANT]
-> The main branch leaves some of the code parts empty or fills them with dummy examples, showing just the base structure. The final users can add code required for their own tasks.
-
-You can find examples of this template completed for different tasks in other branches:
-
-- [HF Main](https://github.com/Blinorot/pytorch_project_template/tree/hf_main): the variant of the `main` branch with [HuggingFace](https://huggingface.co/) Integration. Supports multi-GPU and multi-node training, automatic mixed precision, gradient accumulation, and seamless HuggingFace Ecosystem Compatibility.
-
-- [Image classification](https://github.com/Blinorot/pytorch_project_template/tree/example/image-classification): simple classification problem on [MNIST](https://yann.lecun.com/exdb/mnist/) and [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) datasets.
-
-- [ASR](https://github.com/Blinorot/pytorch_project_template/tree/example/asr): template for the automatic speech recognition (ASR) task. Some of the parts (for example, `collate_fn` and beam search for `text_encoder`) are missing for studying purposes of [HSE DLA course](https://github.com/markovka17/dla).
-
-## Installation
-
-Installation may depend on your task. The general steps are the following:
-
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
-
-   a. `conda` version:
+2. Обучение (создаёт `saved/lcnn/checkpoint-epoch10.pth`):
 
    ```bash
-   # create env
-   conda create -n project_env python=PYTHON_VERSION
-
-   # activate env
-   conda activate project_env
+   python train.py data_dir=/путь/к/LA/LA
    ```
 
-   b. `venv` (`+pyenv`) version:
 
+   Путь `data_dir` должен указывать на директорию, содержащую
+   `ASVspoof2019_LA_train`, `ASVspoof2019_LA_dev`, `ASVspoof2019_LA_eval`,
+   `ASVspoof2019_LA_cm_protocols`.
+
+3. Построение прогноза на eval (создаёт `data/saved/asvspoof/eval.csv`)
    ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
-
-   # alternatively, using default python version
-   python3 -m venv project_env
-
-   # activate env
-   source project_env/bin/activate
+   python inference.py data_dir=/путь/к/LA/LA
    ```
 
-1. Install all required packages
+## Кредиты
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Шаблон: [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template),
+  Petr Grinberg (Blinorot).
+- LightCNN: Wu et al., [arXiv:1511.02683](https://arxiv.org/abs/1511.02683).
+- LCNN для anti-spoofing (STC): Lavrentyeva et al., [arXiv:1904.05576](https://arxiv.org/abs/1904.05576).
+- Recipe и сравнение лоссов: Wang & Yamagishi, [arXiv:2103.11326](https://arxiv.org/abs/2103.11326).
 
-2. Install `pre-commit`:
-   ```bash
-   pre-commit install
-   ```
-
-## How To Use
-
-To train a model, run the following command:
-
-```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
-```
-
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
-
-To run inference (evaluate the model or save predictions):
-
-```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
-```
-
-## Useful Links:
-
-You may find the following links useful:
-
-- [Report branch](https://github.com/Blinorot/pytorch_project_template/tree/report): Guidelines for writing a scientific report/paper (with an emphasis on DL projects).
-
-- [CLAIRE Template](https://github.com/CLAIRE-Labo/python-ml-research-template): additional template by [EPFL CLAIRE Laboratory](https://www.epfl.ch/labs/claire/) that can be combined with ours to enhance experiments reproducibility via [Docker](https://www.docker.com/).
-
-- [Mamba](https://github.com/mamba-org/mamba) and [Poetry](https://python-poetry.org/): alternatives to [Conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [pip](https://pip.pypa.io/en/stable/installation/) package managers given above.
-
-- [Awesome README](https://github.com/matiassingers/awesome-readme): a list of awesome README files for inspiration. Check the basics [here](https://github.com/PurpleBooth/a-good-readme-template).
-
-## Credits
-
-This repository is based on a heavily modified fork of [pytorch-template](https://github.com/victoresque/pytorch-template) and [asr_project_template](https://github.com/WrathOfGrapes/asr_project_template) repositories.
-
-## License
-
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
